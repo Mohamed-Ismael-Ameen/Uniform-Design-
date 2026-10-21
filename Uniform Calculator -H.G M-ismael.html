@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Mechanical Design Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- MathJax for LaTeX Equation Rendering -->
+    <script>
+        window.MathJax = {
+          tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- Chart.js for Hydraulic Gradient Plot -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .designer-banner {
+            background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a);
+            background-size: 200% auto;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+        .math-overflow {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 text-slate-800">
+
+    <!-- REQUIRED HEADER -->
+    <div class="designer-banner text-white text-center py-3 font-black tracking-[0.2em] text-sm md:text-lg shadow-md border-b-4 border-blue-500">
+        DESIGNED BY MOHAMED ISMAEL AMEEN
+    </div>
+
+    <div class="max-w-6xl mx-auto w-full bg-white rounded-2xl shadow-xl overflow-hidden mt-8 border border-slate-100">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-900 to-blue-700 p-6 text-white text-center shadow-inner">
+            <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight mb-2">Pipeline Mechanical Design Calculator</h1>
+            <p class="text-blue-100 text-sm md:text-base">Calculate Uniform Thickness, Pump Stations, and Plot HGL over Elevation</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="p-6 md:p-8">
+            <div id="errorMessage" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-lg font-semibold">
+                Please fill in all required fields with valid numbers.
+            </div>
+
+            <form id="calculatorForm" class="space-y-8">
+                <!-- Inputs Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- Flow Rate Section -->
+                    <div class="col-span-1 md:col-span-3 bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <label class="block text-sm font-bold text-slate-800 mb-3">Flow Rate (Q)</label>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="number" id="flowRate" step="any" placeholder="e.g. 600 or 4" required
+                                class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            <select id="flowUnit" class="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white font-semibold cursor-pointer min-w-[200px]">
+                                <option value="m3_hr">m³/hr</option>
+                                <option value="MTA">MTA (Million Tons Annually)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Column 1: Pipeline & Fluid Specs -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-blue-100 pb-2 text-lg">Pipeline & Fluid Specs</h3>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Total Length (L) [km]</label>
+                            <input type="number" id="length" step="any" value="120" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Specific Gravity (S.G)</label>
+                            <input type="number" id="sg" step="any" value="0.85" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Kinematic Viscosity (ν) [c.st]</label>
+                            <input type="number" id="viscosity" step="any" value="25" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Elevation Diff (hs) [m]</label>
+                            <input type="number" id="hs" step="any" value="150" placeholder="+ up, - down, 0 horizontal" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Dimensions -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-blue-100 pb-2 text-lg">Dimensions</h3>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Nominal Diameter (ND) [inch]</label>
+                            <input type="number" id="nd" step="any" value="14" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Assumed Thickness (t) [mm]</label>
+                            <input type="number" id="tAssume" step="any" value="6.35" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Inner Diameter (ID) [mm]</label>
+                            <input type="number" id="id" step="any" value="342.9" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Outer Diameter (OD) [mm]</label>
+                            <input type="number" id="od" step="any" value="355.6" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Material & Factors -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-800 border-b-2 border-blue-100 pb-2 text-lg">Material & Factors</h3>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Yield Strength (Ty) [psi]</label>
+                            <input type="number" id="ty" step="any" value="60000" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Safety Factor (S)</label>
+                            <input type="number" id="safety" step="any" value="0.72" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">Utilization Factor (UF)</label>
+                            <input type="number" id="uf" step="any" value="0.913" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button type="button" onclick="calculatePipeline()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 text-xl tracking-wide border-b-4 border-blue-800 active:border-b-0 active:translate-y-0">
+                    CALCULATE DESIGN
+                </button>
+            </form>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden mt-12 space-y-8 animate-fade-in">
+                
+                <!-- Hydraulic Gradient Chart -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-2 border-b-2 border-slate-100 pb-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        Hydraulic Gradient Line (HGL) vs Elevation
+                    </h3>
+                    <div class="relative w-full h-[400px]">
+                        <canvas id="hydraulicChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Step by Step Section -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2 border-b-2 border-slate-100 pb-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                        Step-by-Step Solution
+                    </h3>
+                    <div class="grid grid-cols-1 gap-4" id="stepsContainer">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null; // Store chart instance
+
+        function getVal(id) { return parseFloat(document.getElementById(id).value); }
+        function formatNum(num, decimals = 2) { 
+            return Number(num.toFixed(decimals)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: decimals, useGrouping: false}); 
+        }
+
+        function createStepCard(title, equation, substitution, result) {
+            let resultHtml = result ? `<div class="flex items-center gap-3 pt-2 mt-2 border-t border-slate-200"><span class="text-green-600 font-bold text-sm uppercase tracking-wide">Result:</span><span class="text-green-700 font-bold text-lg math-overflow">${result}</span></div>` : '';
+            return `
+            <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <h4 class="text-lg font-bold text-slate-800 mb-3">${title}</h4>
+                <div class="bg-slate-50 rounded-lg p-4 text-slate-700 flex flex-col gap-2">
+                    <div class="flex flex-col gap-1 pb-1 mb-1 math-overflow">
+                        <span class="text-blue-600 font-bold text-[11px] uppercase tracking-wider">Formula</span>
+                        <div class="text-center text-lg">${equation}</div>
+                    </div>
+                    ${substitution ? `
+                    <div class="flex flex-col gap-1 pb-1 mb-1 math-overflow">
+                        <span class="text-amber-600 font-bold text-[11px] uppercase tracking-wider">Substitution</span>
+                        <div class="text-center text-lg">${substitution}</div>
+                    </div>` : ''}
+                    ${resultHtml}
+                </div>
+            </div>`;
+        }
+
+        async function calculatePipeline() {
+            const errDiv = document.getElementById('errorMessage');
+            const resDiv = document.getElementById('resultsSection');
+            const stepsContainer = document.getElementById('stepsContainer');
+            
+            errDiv.classList.add('hidden');
+            resDiv.classList.add('hidden');
+
+            try {
+                // Fetch Inputs
+                const flowRateVal = getVal('flowRate');
+                const flowUnit = document.getElementById('flowUnit').value;
+                const L_km = getVal('length');
+                const ND = getVal('nd');
+                const SG = getVal('sg');
+                const nu_cst = getVal('viscosity');
+                const h_s = getVal('hs');
+                const Ty = getVal('ty');
+                const t_assume = getVal('tAssume');
+                const ID_mm = getVal('id');
+                const OD_mm = getVal('od');
+                const S_factor = getVal('safety');
+                const UF = getVal('uf');
+
+                if ([flowRateVal, L_km, ND, SG, nu_cst, h_s, Ty, t_assume, ID_mm, OD_mm, S_factor, UF].some(isNaN)) {
+                    throw new Error("Invalid Input");
+                }
+
+                const g = 9.8; 
+                const P_max_allowed = 100;
+                const L_m = L_km * 1000;
+                
+                // Remove trailing zeros for ID in meters
+                const ID_m_num = ID_mm / 1000;
+                const ID_m_str = parseFloat(ID_m_num.toFixed(6)).toString(); 
+                
+                let stepsHTML = '';
+
+                // 1. Flow Rate Q
+                let Q_m3_s, Q_m3_hr;
+                if (flowUnit === 'MTA') {
+                    Q_m3_s = (flowRateVal * 1e6) / (SG * 24 * 365 * UF * 3600);
+                    Q_m3_hr = Q_m3_s * 3600;
+                    stepsHTML += createStepCard(
+                        "1. Flow Rate (Q)",
+                        `$$ Q = \\frac{\\text{MTA} \\times 10^6}{S.G \\times 24 \\times 365 \\times UF \\times 3600} $$`,
+                        `$$ Q = \\frac{${flowRateVal} \\times 10^6}{${SG} \\times 24 \\times 365 \\times ${UF} \\times 3600} $$`,
+                        `$$ ${formatNum(Q_m3_s, 4)} \\text{ m}^3\\text{/s} \\quad \\text{(or } ${formatNum(Q_m3_hr, 2)} \\text{ m}^3\\text{/hr)} $$`
+                    );
+                } else {
+                    Q_m3_hr = flowRateVal;
+                    Q_m3_s = Q_m3_hr / 3600;
+                    stepsHTML += createStepCard(
+                        "1. Flow Rate (Q)",
+                        `$$ Q_{m^3/s} = \\frac{Q_{m^3/hr}}{3600} $$`,
+                        `$$ Q_{m^3/s} = \\frac{${flowRateVal}}{3600} $$`,
+                        `$$ ${formatNum(Q_m3_s, 4)} \\text{ m}^3\\text{/s} $$`
+                    );
+                }
+
+                // 2. Velocity
+                const V = (4 * Q_m3_s) / (Math.PI * Math.pow(ID_m_num, 2));
+                stepsHTML += createStepCard(
+                    "2. Flow Velocity (V)",
+                    `$$ V = \\frac{4 \\times Q}{\\pi \\times D^2} $$`,
+                    `$$ V = \\frac{4 \\times ${formatNum(Q_m3_s, 4)}}{\\pi \\times (${ID_m_str})^2} $$`,
+                    `$$ ${formatNum(V, 3)} \\text{ m/s} $$`
+                );
+
+                // 3. Reynolds Number
+                const Re = (V * ID_m_num) / (nu_cst * 1e-6);
+                const flowTypeStr = Re > 4200 ? "\\text{Flow is turbulent}" : (Re < 2100 ? "\\text{Flow is laminar}" : "\\text{Flow is transitional}");
+                stepsHTML += createStepCard(
+                    "3. Reynolds Number (Re)",
+                    `$$ Re = \\frac{V \\times D}{\\nu \\times 10^{-6}} $$`,
+                    `$$ Re = \\frac{${formatNum(V, 3)} \\times ${ID_m_str}}{${nu_cst} \\times 10^{-6}} $$`,
+                    `$$ ${formatNum(Re, 2)} \\implies \\text{${flowTypeStr}} $$`
+                );
+
+                // 4. Friction Factor
+                let f;
+                if (Re < 2100) {
+                    f = 64 / Re;
+                    stepsHTML += createStepCard(
+                        "4. Friction Factor (f) - Laminar",
+                        `$$ f = \\frac{64}{Re} $$`,
+                        `$$ f = \\frac{64}{${formatNum(Re, 2)}} $$`,
+                        `$$ ${formatNum(f, 3)} $$`
+                    );
+                } else {
+                    f = 0.316 / Math.pow(Re, 0.25);
+                    stepsHTML += createStepCard(
+                        "4. Friction Factor (f) - Turbulent",
+                        `$$ f = \\frac{0.316}{Re^{0.25}} $$`,
+                        `$$ f = \\frac{0.316}{(${formatNum(Re, 2)})^{0.25}} $$`,
+                        `$$ ${formatNum(f, 3)} $$`
+                    );
+                }
+
+                // 5. Overall Friction Head Loss
+                const h_f = (f * L_m * Math.pow(V, 2)) / (2 * g * ID_m_num);
+                stepsHTML += createStepCard(
+                    "5. Total Friction Head Loss (hf)",
+                    `$$ h_f = \\frac{f \\times L \\times V^2}{2 \\times g \\times D} $$`,
+                    `$$ h_f = \\frac{${formatNum(f, 3)} \\times ${L_m} \\times (${formatNum(V, 3)})^2}{2 \\times 9.8 \\times ${ID_m_str}} $$`,
+                    `$$ ${formatNum(h_f, 2)} \\text{ m} $$`
+                );
+
+                // 6. Overall Total Head
+                const overall_H_t = h_f + h_s + 40;
+                stepsHTML += createStepCard(
+                    "6. Total Head Required (Ht)",
+                    `$$ H_t = h_f + h_s + 40 $$`,
+                    `$$ H_t = ${formatNum(h_f, 2)} + (${h_s}) + 40 $$`,
+                    `$$ ${formatNum(overall_H_t, 2)} \\text{ m} $$`
+                );
+
+                // 7. Overall Delta P
+                const overall_delta_p = (overall_H_t * SG) / 10;
+                stepsHTML += createStepCard(
+                    "7. Total Pressure Drop (\\(\\Delta P\\))",
+                    `$$ \\Delta P = \\frac{H_t \\times S.G}{10} $$`,
+                    `$$ \\Delta P = \\frac{${formatNum(overall_H_t, 2)} \\times ${SG}}{10} $$`,
+                    `$$ ${formatNum(overall_delta_p, 2)} \\text{ bar} $$`
+                );
+
+                // 8. Required Thickness Tc
+                const T_c = (100 * OD_mm * 14.7) / (2 * Ty * S_factor);
+                const isSafe = T_c <= t_assume;
+                const safetySymbol = isSafe ? "\\leq" : ">";
+                const safetyText = isSafe ? "\\text{Safe and Economic}" : "\\text{Not Safe}";
+                
+                stepsHTML += createStepCard(
+                    "8. Uniform Safe Thickness (Tc)",
+                    `$$ T_c = \\frac{P_{max} \\times OD \\times 14.7}{2 \\times T_y \\times S} $$`,
+                    `$$ T_c = \\frac{100 \\times ${OD_mm} \\times 14.7}{2 \\times ${Ty} \\times ${S_factor}} $$`,
+                    `$$ ${formatNum(T_c, 2)} \\text{ mm} \\quad \\implies (T_c ${safetySymbol} t_{assume} \\rightarrow ${safetyText}) $$`
+                );
+
+                // 9. Number of Pumps
+                const exactPumps = overall_delta_p / 100;
+                const numPumps = Math.ceil(exactPumps);
+                stepsHTML += createStepCard(
+                    "9. Number of Pump Stations",
+                    `$$ \\text{No. Pumps} = \\frac{\\Delta P}{100} $$`,
+                    `$$ \\text{No. Pumps} = \\frac{${formatNum(overall_delta_p, 2)}}{100} = ${formatNum(exactPumps, 2)} $$`,
+                    `$$ \\implies ${numPumps} \\text{ Pump Station(s)} $$`
+                );
+
+                // 10. Pump Stations Breakdown (Grouped) & Chart Points Generation
+                let chartPointsHGL = [];
+                let currentX_km = 0;
+
+                if (numPumps > 1) {
+                    const H_end_inter = 15;
+                    const H_t_inter = (100 * 10) / SG;
+                    
+                    const K_f = (f * Math.pow(V, 2)) / (2 * g * ID_m_num); // Friction per meter
+                    const K_h = h_s / L_m; // Elevation gradient per meter
+                    
+                    const L_inter_m = (H_t_inter - H_end_inter) / (K_f + K_h);
+                    const L_inter_km = L_inter_m / 1000;
+                    
+                    // Grouping Intermediate Stations for text display
+                    let hLabels = [];
+                    let lLabels = [];
+                    
+                    for(let i=1; i<numPumps; i++) {
+                        hLabels.push(`H_{t${i}}`);
+                        lLabels.push(`l_{${i}}`);
+                        
+                        // Add points to HGL chart: Pump absolute head relative to local elevation
+                        let currentElev_m = currentX_km * 1000 * K_h;
+                        chartPointsHGL.push({ x: currentX_km, y: currentElev_m + H_t_inter });
+                        
+                        currentX_km += L_inter_km;
+                        
+                        // Pressure drops to terminal head (15m) above the local elevation
+                        let nextElev_m = currentX_km * 1000 * K_h;
+                        chartPointsHGL.push({ x: currentX_km, y: nextElev_m + 15 });
+                    }
+
+                    const interLabelH = hLabels.join(" = ");
+                    const interLabelL = lLabels.join(" = ");
+                    const labelPrefix = numPumps >= 3 ? `Stations 1 to ${numPumps-1} (Grouped)` : `Station 1`;
+
+                    stepsHTML += createStepCard(
+                        `10.1 ${labelPrefix} - Total Head`,
+                        `$$ ${interLabelH} = \\frac{P_{max} \\times 10}{S.G} $$`,
+                        `$$ ${interLabelH} = \\frac{100 \\times 10}{${SG}} $$`,
+                        `$$ ${formatNum(H_t_inter, 2)} \\text{ m} $$`
+                    );
+
+                    stepsHTML += createStepCard(
+                        `10.2 ${labelPrefix} - Length`,
+                        `$$ H_{t1} = \\frac{f \\times l_1 \\times V^2}{2 \\times g \\times D} + \\frac{h_s \\times l_1}{L_{total}} + 15 $$`,
+                        `$$ ${formatNum(H_t_inter, 2)} = \\frac{${formatNum(f, 3)} \\times l_1 \\times (${formatNum(V, 3)})^2}{2 \\times 9.8 \\times ${ID_m_str}} + \\frac{${h_s} \\times l_1}{${L_m}} + 15 $$`,
+                        `$$ ${interLabelL} = ${formatNum(L_inter_m, 2)} \\text{ m} = ${formatNum(L_inter_km, 2)} \\text{ km} $$`
+                    );
+
+                    // Final Station
+                    const numInter = numPumps - 1;
+                    const L_inter_total_m = numInter * L_inter_m;
+                    const L_last_m = L_m - L_inter_total_m;
+                    const L_last_km = L_last_m / 1000;
+
+                    stepsHTML += createStepCard(
+                        `10.3 Station ${numPumps} (Final) - Length`,
+                        `$$ l_{${numPumps}} = L_{total} - \\Sigma l_{prev} $$`,
+                        `$$ l_{${numPumps}} = ${L_m} \\text{ m} - (${numInter} \\times ${formatNum(L_inter_m, 2)}) \\text{ m} $$`,
+                        `$$ l_{${numPumps}} = ${formatNum(L_last_m, 2)} \\text{ m} = ${formatNum(L_last_km, 2)} \\text{ km} $$`
+                    );
+
+                    const h_f_last = (f * L_last_m * Math.pow(V, 2)) / (2 * g * ID_m_num);
+                    const h_s_last = K_h * L_last_m;
+                    const H_t_last = h_f_last + h_s_last + 40;
+
+                    stepsHTML += createStepCard(
+                        `10.4 Station ${numPumps} (Final) - Total Head`,
+                        `$$ H_{t${numPumps}} = \\frac{f \\times l_{${numPumps}} \\times V^2}{2 \\times g \\times D} + \\frac{h_s \\times l_{${numPumps}}}{L_{total}} + 40 $$`,
+                        `$$ H_{t${numPumps}} = \\frac{${formatNum(f, 3)} \\times ${formatNum(L_last_m, 2)} \\times (${formatNum(V, 3)})^2}{2 \\times 9.8 \\times ${ID_m_str}} + \\frac{${h_s} \\times ${formatNum(L_last_m, 2)}}{${L_m}} + 40 $$`,
+                        `$$ H_{t${numPumps}} = ${formatNum(H_t_last, 2)} \\text{ m} $$`
+                    );
+
+                    // Add final chart points
+                    let currentElev_m = currentX_km * 1000 * K_h;
+                    chartPointsHGL.push({ x: currentX_km, y: currentElev_m + H_t_last });
+                    chartPointsHGL.push({ x: L_km, y: h_s + 40 });
+
+                } else {
+                    stepsHTML += createStepCard(
+                        "10. Station Breakdown",
+                        "\\text{Only 1 Pump Station is required.}",
+                        "",
+                        "\\text{No further intermediate stations needed.}"
+                    );
+                    
+                    // Single pump chart points
+                    chartPointsHGL.push({ x: 0, y: overall_H_t });
+                    chartPointsHGL.push({ x: L_km, y: h_s + 40 });
+                }
+
+                stepsContainer.innerHTML = stepsHTML;
+
+                if (window.MathJax) {
+                    await MathJax.typesetPromise([stepsContainer]);
+                }
+
+                // Render Chart with Ground Elevation & HGL
+                renderChart(chartPointsHGL, L_km, h_s);
+
+                resDiv.classList.remove('hidden');
+                resDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                errDiv.classList.remove('hidden');
+                console.error("Calculation Error:", error);
+            }
+        }
+
+        function renderChart(hglPoints, maxL, maxH_s) {
+            const ctx = document.getElementById('hydraulicChart').getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Hydraulic Gradient Line (HGL)',
+                            data: hglPoints,
+                            borderColor: 'rgba(37, 99, 235, 1)', // Tailwind blue-600
+                            backgroundColor: 'rgba(37, 99, 235, 1)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'red',
+                            showLine: true,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'Ground Elevation Profile',
+                            data: [ {x: 0, y: 0}, {x: maxL, y: maxH_s} ],
+                            borderColor: 'rgba(100, 116, 139, 1)', // Tailwind slate-500
+                            backgroundColor: 'rgba(203, 213, 225, 0.4)', // Tailwind slate-300 light
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            showLine: true,
+                            fill: 'origin',
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Distance L (km)',
+                                font: { weight: 'bold', size: 14 }
+                            },
+                            min: 0,
+                            max: maxL
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Head Ht / Elevation (m)',
+                                font: { weight: 'bold', size: 14 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `L: ${context.parsed.x.toFixed(2)} km, Elev/H: ${context.parsed.y.toFixed(2)} m`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
